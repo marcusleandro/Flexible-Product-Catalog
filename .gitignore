@@ -129,5 +129,3 @@ typings/
 yarn.lock
 
 __tests__/coverage/
-
-.env
