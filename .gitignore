@@ -124,10 +124,6 @@ typings/
 # Vscode
 *.code-workspace
 
-.vagrant/
-
-yarn.lock
-
 __tests__/coverage/
 
 .env
