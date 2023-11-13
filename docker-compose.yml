@@ -1,0 +1,33 @@
+version: "3.7"
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    image: rws/api:latest
+    container_name: rws-api
+    depends_on:
+      - mongodb
+    links:
+      - mongodb
+    volumes:
+      - .:/var/rws-api
+      - /var/rws-api/node_modules
+    ports:
+      - "4000:4000"
+    tty: true
+
+  mongodb:
+    image: mongo
+    container_name: rws-mongo
+    # environment:
+    #   MONGO_INITDB_ROOT_USERNAME: your_username
+    #   MONGO_INITDB_ROOT_PASSWORD: your_password
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+volumes:
+  mongodb_data:
