@@ -9,6 +9,7 @@ const {
 
 const db = require("../db");
 const Product = require("../models/Product");
+const productService = require("../services/ProductService");
 const factory = require("../../__tests__/factories");
 
 describe("Product", () => {
@@ -298,7 +299,7 @@ describe("Product", () => {
   describe("toBusinessDataFormat", () => {
     it("should return a product in business format", async () => {
       const product = await factory.create("Product");
-      const productBI = product.toBusinessDataFormat();
+      const productBI = productService.toBusinessDataFormat(product._doc);
 
       expect(product.name).toBe(productBI.name);
       expect(product.prices.currentPrice).toBe(productBI.currentPrice);
@@ -320,7 +321,7 @@ describe("Product", () => {
       // Save the updated product
       await product.save();
 
-      const productBI = product.toBusinessDataFormat();
+      const productBI = productService.toBusinessDataFormat(product._doc);
       //console.log("productBI: ", productBI);
 
       expect(product.name).toBe(productBI.name);
@@ -333,8 +334,6 @@ describe("Product", () => {
       });
     });
   });
-
-  // test toBusinessDataFormatList method:
 
   describe("toBusinessDataFormatList", () => {
     it("should return a list of products in business format", async () => {
@@ -349,7 +348,7 @@ describe("Product", () => {
 
       const products = await Product.find();
 
-      const productsBI = Product.toBusinessDataFormatList(products);
+      const productsBI = productService.toBusinessDataFormatList(products);
 
       expect(products.length).toBe(productsBI.length);
 
@@ -384,7 +383,7 @@ describe("Product", () => {
         ecommerceName: "Coca Cola Normal 2L",
       };
 
-      const did = Product.toDatabaseDataFormat(bid);
+      const did = productService.toDatabaseDataFormat(bid);
 
       expect(did.name).toBe(bid.name);
       expect(did.prices.currentPrice).toBe(bid.currentPrice);

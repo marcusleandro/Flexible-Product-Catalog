@@ -12,7 +12,7 @@ const mongoose = require("mongoose");
 
 const app = require("../app");
 const db = require("../db");
-const Product = require("../models/Product");
+const productService = require("../services/ProductService");
 const factory = require("../../__tests__/factories");
 
 describe("ProductController", () => {
@@ -34,7 +34,7 @@ describe("ProductController", () => {
 
     it("should return ONE product", async () => {
       const product = await factory.create("Product");
-      const productBI = product.toBusinessDataFormat();
+      const productBI = productService.toBusinessDataFormat(product._doc);
 
       const res = await request(app).get("/api/products");
       expect(res.statusCode).toBe(200);
@@ -51,8 +51,8 @@ describe("ProductController", () => {
     it("should return TWO products", async () => {
       const product1 = await factory.create("Product");
       const product2 = await factory.create("Product");
-      const productBI1 = product1.toBusinessDataFormat();
-      const productBI2 = product2.toBusinessDataFormat();
+      const productBI1 = productService.toBusinessDataFormat(product1._doc);
+      const productBI2 = productService.toBusinessDataFormat(product2._doc);
 
       const res = await request(app).get("/api/products");
       expect(res.statusCode).toBe(200);
@@ -85,8 +85,8 @@ describe("ProductController", () => {
     it("should return ONE product with page=1 and size=1", async () => {
       const product1 = await factory.create("Product");
       const product2 = await factory.create("Product");
-      const productBI1 = product1.toBusinessDataFormat();
-      const productBI2 = product2.toBusinessDataFormat();
+      const productBI1 = productService.toBusinessDataFormat(product1._doc);
+      const productBI2 = productService.toBusinessDataFormat(product2._doc);
 
       const res = await request(app).get("/api/products?page=1&size=1");
       expect(res.statusCode).toBe(200);
@@ -105,8 +105,8 @@ describe("ProductController", () => {
     it("should return products sorted by name in ascending order when sortBy=name", async () => {
       const product1 = await factory.create("Product", { name: "B" });
       const product2 = await factory.create("Product", { name: "A" });
-      const productBI1 = product1.toBusinessDataFormat();
-      const productBI2 = product2.toBusinessDataFormat();
+      const productBI1 = productService.toBusinessDataFormat(product1._doc);
+      const productBI2 = productService.toBusinessDataFormat(product2._doc);
 
       const res = await request(app).get("/api/products?sortBy=name");
       //console.log("res.body: ", res.body);
@@ -125,8 +125,8 @@ describe("ProductController", () => {
     it("should return products sorted by name in descending order when sortBy=-name", async () => {
       const product1 = await factory.create("Product", { name: "B" });
       const product2 = await factory.create("Product", { name: "A" });
-      const productBI1 = product1.toBusinessDataFormat();
-      const productBI2 = product2.toBusinessDataFormat();
+      const productBI1 = productService.toBusinessDataFormat(product1._doc);
+      const productBI2 = productService.toBusinessDataFormat(product2._doc);
 
       const res = await request(app).get("/api/products?sortBy=name:desc");
       //console.log("res.body: ", res.body);
@@ -147,8 +147,8 @@ describe("ProductController", () => {
     it("should return products filtered by name when name=product1", async () => {
       const product1 = await factory.create("Product", { name: "product1" });
       const product2 = await factory.create("Product", { name: "product2" });
-      const productBI1 = product1.toBusinessDataFormat();
-      const productBI2 = product2.toBusinessDataFormat();
+      const productBI1 = productService.toBusinessDataFormat(product1._doc);
+      const productBI2 = productService.toBusinessDataFormat(product2._doc);
 
       const res = await request(app).get("/api/products?name=product1");
       //console.log("res.body: ", res.body);
@@ -170,7 +170,7 @@ describe("ProductController", () => {
         factory.create("Product", { name: "product2" }),
       ]);
 
-      const productBI1 = product1.toBusinessDataFormat();
+      const productBI1 = productService.toBusinessDataFormat(product1._doc);
 
       const res = await request(app).get(`/api/products?id=${product1._id}`);
       expect(res.statusCode).toBe(200);
@@ -198,7 +198,7 @@ describe("ProductController", () => {
         }),
       ]);
 
-      const productBI1 = product1.toBusinessDataFormat();
+      const productBI1 = productService.toBusinessDataFormat(product1._doc);
 
       const res = await request(app).get(`/api/products?customAttribute=a`);
       expect(res.statusCode).toBe(200);
@@ -221,13 +221,13 @@ describe("ProductController", () => {
         .get(`/api/products/${product._id}`)
         .expect(200);
 
-      const productBI = product.toBusinessDataFormat();
+      const productBI = productService.toBusinessDataFormat(product._doc);
 
       // normalizing 'createdAt', 'updatedAt' and 'id' to correspond with the response:
       productBI.createdAt = new Date(productBI.createdAt).getTime();
       productBI.updatedAt = new Date(productBI.updatedAt).getTime();
 
-      expect(body.body).toEqual(productBI);
+      expect(body.body).toEqual({ ...productBI });
     });
 
     it("should call next with an error when given an invalid id", async () => {
@@ -274,22 +274,24 @@ describe("ProductController", () => {
         ecommerceOfferPrice: 0,
         ecommerceName: "Fanta 2L",
       };
-      const { body } = await request(app)
+      const { body, statusCode } = await request(app)
         .post("/api/products")
         .send(productData)
         .expect(201);
 
-      expect(body.name).toBe(productData.name);
-      expect(body.currentPrice).toBe(productData.currentPrice);
-      expect(body.offerPrice).toBe(productData.offerPrice);
-      expect(body.quantity).toBe(productData.quantity);
-      expect(body.ecommerceCurrentPrice).toBe(
+      const data = body.body;
+
+      expect(data.name).toBe(productData.name);
+      expect(data.currentPrice).toBe(productData.currentPrice);
+      expect(data.offerPrice).toBe(productData.offerPrice);
+      expect(data.quantity).toBe(productData.quantity);
+      expect(data.ecommerceCurrentPrice).toBe(
         `${productData.ecommerceCurrentPrice}`
       );
-      expect(body.ecommerceOfferPrice).toBe(
+      expect(data.ecommerceOfferPrice).toBe(
         `${productData.ecommerceOfferPrice}`
       );
-      expect(body.ecommerceName).toBe(productData.ecommerceName);
+      expect(data.ecommerceName).toBe(productData.ecommerceName);
     });
 
     it("should not create a product with invalid data", async () => {

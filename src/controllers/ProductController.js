@@ -1,8 +1,8 @@
 const httpStatus = require("http-status");
-const Product = require("../models/Product");
 const ObjectUtil = require("../utils/ObjectUtil");
 const { StatusError } = require("../utils/errorHandlers");
 const logger = require("../services/Logger");
+const productService = require("../services/ProductService");
 
 class ProductController {
   constructor() {
@@ -96,17 +96,15 @@ class ProductController {
       }
       //console.log("sort: ", sort);
 
-      return Product.find({ ...query })
-        .limit(limit)
-        .skip(offset)
-        .sort(sort)
+      return productService
+        .list({ limit, offset, sort, query })
         .then((products) =>
-          Promise.all([products, Product.countDocuments({ ...query })])
+          Promise.all([products, productService.count(query)])
         )
         .then(([products, totalCount]) =>
           res.status(httpStatus.OK).send({
             meta: { totalCount },
-            body: Product.toBusinessDataFormatList(products),
+            body: products,
           })
         )
         .catch(next);
@@ -122,15 +120,12 @@ class ProductController {
      */
     return async (req, res, next) => {
       const id = req.validated?.params.id;
-      return Product.findById(id)
+      return productService
+        .get(id)
         .then((product) =>
           this.#resourceNotFound(product, "Product not found!")
         )
-        .then((product) =>
-          res
-            .status(httpStatus.OK)
-            .send({ body: product.toBusinessDataFormat() })
-        )
+        .then((product) => res.status(httpStatus.OK).send({ body: product }))
         .catch(next);
     };
   }
@@ -143,21 +138,13 @@ class ProductController {
      * @returns {Promise<import('express').Response>}
      */
     return async (req, res, next) => {
-      try {
-        const createForm = { ...req.body, ...req.validated?.body };
-        //console.log("createForm: ", createForm);
-
-        const data = Product.toDatabaseDataFormat(createForm);
-        const product = new Product(data);
-
-        await product.save();
-
-        return res
-          .status(httpStatus.CREATED)
-          .json(product.toBusinessDataFormat());
-      } catch (error) {
-        next(error);
-      }
+      const createForm = { ...req.body, ...req.validated?.body };
+      return productService
+        .create(createForm)
+        .then((product) =>
+          res.status(httpStatus.CREATED).json({ body: product })
+        )
+        .catch(next);
     };
   }
 
@@ -169,23 +156,11 @@ class ProductController {
      * @returns {Promise<import('express').Response>}
      */
     return async (req, res, next) => {
-      const id = req.validated?.params.id;
-      const updateForm = { ...req.body, ...req.validated?.body };
-      ObjectUtil.clean(updateForm);
-      //this._logger.info("updateForm: ", updateForm);
-
-      const data = Product.toDatabaseDataFormat(updateForm);
-      //this._logger.info("data to update: ", data);
-
-      return Product.findByIdAndUpdate(id, data, { new: true })
-        .then((product) =>
-          this.#resourceNotFound(product, "Product not found!")
-        )
-        .then((product) =>
-          res
-            .status(httpStatus.OK)
-            .send({ body: product.toBusinessDataFormat() })
-        )
+      const id = req.validated?.params.id,
+        updateForm = { ...req.body, ...req.validated?.body };
+      return productService
+        .update(id, ObjectUtil.clean(updateForm))
+        .then((product) => res.status(httpStatus.OK).send({ body: product }))
         .catch(next);
     };
   }
@@ -199,10 +174,8 @@ class ProductController {
      */
     return async (req, res, next) => {
       const id = req.validated?.params.id;
-      return Product.findByIdAndDelete(id)
-        .then((product) =>
-          this.#resourceNotFound(product, "Product not found!")
-        )
+      return productService
+        .delete(id)
         .then((product) => res.status(httpStatus.NO_CONTENT).send())
         .catch(next);
     };
